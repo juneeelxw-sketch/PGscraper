@@ -4,16 +4,12 @@ from __future__ import annotations
 
 import random
 import re
+import sys
 import time
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
 
-from playwright.sync_api import Browser, Page, sync_playwright
-
-USER_AGENT = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36"
-)
+from playwright.sync_api import BrowserContext, Page, sync_playwright
 
 # Collects listing cards from the rendered DOM, used when __NEXT_DATA__ is absent.
 _CARDS_JS = """
@@ -54,36 +50,47 @@ def page_url(search_url: str, page_no: int) -> str:
     return urlunsplit(parts._replace(path=path))
 
 
+def _challenged(page: Page) -> bool:
+    title = (page.title() or "").lower()
+    return any(t in title for t in ("just a moment", "attention required", "access denied"))
+
+
 class Fetcher:
+    """One browser session for a whole run.
+
+    The browser profile (cookies) is kept in `profile_dir`, so once you have
+    passed PropertyGuru's "Verify you are human" check in a visible browser
+    (--headful), later pages and later runs usually don't ask again.
+    """
+
     def __init__(self, headless: bool = True, delay: tuple[float, float] = (3.0, 6.0),
-                 debug_dir: str | None = None):
+                 debug_dir: str | None = None, profile_dir: str = "browser-profile",
+                 human_wait_seconds: int = 180):
         self.headless = headless
         self.delay = delay
         self.debug_dir = Path(debug_dir) if debug_dir else None
+        self.profile_dir = profile_dir
+        self.human_wait_seconds = human_wait_seconds
         self._pw = None
-        self._browser: Browser | None = None
+        self._ctx: BrowserContext | None = None
         self._page: Page | None = None
         self._last = 0.0
 
     def __enter__(self) -> "Fetcher":
         self._pw = sync_playwright().start()
-        self._browser = self._pw.chromium.launch(
+        self._ctx = self._pw.chromium.launch_persistent_context(
+            self.profile_dir,
             headless=self.headless,
-            args=["--disable-blink-features=AutomationControlled"],
-        )
-        ctx = self._browser.new_context(
-            user_agent=USER_AGENT,
             locale="en-SG",
             timezone_id="Asia/Singapore",
             viewport={"width": 1366, "height": 900},
         )
-        ctx.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        self._page = ctx.new_page()
+        self._page = self._ctx.pages[0] if self._ctx.pages else self._ctx.new_page()
         return self
 
     def __exit__(self, *exc) -> None:
-        if self._browser:
-            self._browser.close()
+        if self._ctx:
+            self._ctx.close()
         if self._pw:
             self._pw.stop()
 
@@ -93,19 +100,32 @@ class Fetcher:
             time.sleep(wait)
         self._last = time.time()
 
+    def _wait_for_check(self, page: Page, url: str) -> None:
+        """Let an automatic check finish; in a visible browser, wait for the user to tick the box."""
+        for _ in range(10):  # automatic checks usually clear within a few seconds
+            if not _challenged(page):
+                return
+            page.wait_for_timeout(1500)
+        if self.headless:
+            raise BlockedError(f"PropertyGuru asked to verify you are human at {url}. "
+                               "Run with --headful on your own computer and tick the box.")
+        print(">>> PropertyGuru is asking you to verify you're human. Tick the box in the "
+              f"browser window (waiting up to {self.human_wait_seconds}s)...", file=sys.stderr)
+        deadline = time.time() + self.human_wait_seconds
+        while time.time() < deadline:
+            page.wait_for_timeout(2000)
+            if not _challenged(page):
+                print(">>> Thanks, continuing.", file=sys.stderr)
+                return
+        raise BlockedError(f"Verification wasn't completed in time at {url}")
+
     def get(self, url: str) -> tuple[str, str, list[dict]]:
         """Return (html, visible_text, dom_cards) for a URL."""
         assert self._page is not None
         self._throttle()
         page = self._page
         resp = page.goto(url, wait_until="domcontentloaded", timeout=60_000)
-
-        # Give a Cloudflare-style interstitial a chance to clear itself.
-        for _ in range(20):
-            title = (page.title() or "").lower()
-            if "just a moment" not in title and "attention required" not in title:
-                break
-            page.wait_for_timeout(1500)
+        self._wait_for_check(page, url)
         try:
             page.wait_for_load_state("networkidle", timeout=15_000)
         except Exception:
@@ -120,8 +140,6 @@ class Fetcher:
             slug = re.sub(r"[^a-zA-Z0-9]+", "_", url)[-120:]
             (self.debug_dir / f"{slug}.html").write_text(html, encoding="utf-8")
 
-        title = (page.title() or "").lower()
-        status = resp.status if resp else 0
-        if status in (403, 429) or "just a moment" in title or "access denied" in title:
-            raise BlockedError(f"Blocked by PropertyGuru (HTTP {status}, title {page.title()!r}) at {url}")
+        if _challenged(page) or (resp and resp.status == 429):
+            raise BlockedError(f"Blocked by PropertyGuru (title {page.title()!r}) at {url}")
         return html, text, cards

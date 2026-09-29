@@ -4,18 +4,29 @@ Scrapes PropertyGuru for **Ubi Techpark (10 Ubi Crescent, S408564)** units for s
 **unit number, asking price, floor area (sqft) and PSF**. Every run is logged, so each report shows
 what's new, which prices changed, and which listings were taken down since the last run.
 
-## Setup
+## Setup (on your own computer)
+
+Needs Python 3.10+. In a terminal, from this folder:
 
 ```bash
 pip install -r requirements.txt
-python -m playwright install chromium   # skip in Claude Code cloud (browser is pre-installed)
+python -m playwright install chromium
 ```
 
 ## Run
 
 ```bash
-python -m pgscraper
+python -m pgscraper --headful
 ```
+
+A browser window opens. If PropertyGuru shows **"Verify you are human"**, tick the box — the
+scraper waits up to 3 minutes for you, then carries on by itself. Your pass is saved in
+`browser-profile/`, so later runs usually don't ask again. Afterwards, commit
+`data/observations.csv` so the next run can compare against it.
+
+> **Why not fully automatic / in the cloud?** PropertyGuru uses Cloudflare, which shows a
+> human-verification checkbox to server and headless browsers. The scraper doesn't try to get
+> around that; a person ticks it once from a normal home/office connection.
 
 Output:
 

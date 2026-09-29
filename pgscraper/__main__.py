@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
                     except Exception as e:  # one bad page shouldn't sink the run
                         log(f"    skipped ({e})")
     except BlockedError as e:
-        log(f"ERROR: {e}\nNothing was saved. Try again later, or run with --headful on your own computer.")
+        log(f"ERROR: {e}\nNothing was saved.")
         return 2
 
     if not listings:

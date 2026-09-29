@@ -5,6 +5,9 @@ PROJECT_NAME = "Ubi Techpark"
 # Search result pages to crawl. Page N is fetched by inserting /N into the path
 # (e.g. /property-for-sale/2?...), which is how PropertyGuru paginates.
 SEARCH_URLS = [
+    # Project-specific pages (PropertyGuru project id 20401); found via search engines.
+    "https://www.commercialguru.com.sg/find-commercial-properties/property-for-sale/at-ubi-techpark-20401",
+    "https://www.propertyguru.com.sg/search-property/10-ubi-crescent-ubi-techpark/sale",
     "https://www.propertyguru.com.sg/property-for-sale?market=commercial&freetext=Ubi%20Techpark",
     "https://www.propertyguru.com.sg/property-for-sale?freetext=Ubi%20Techpark",
 ]

@@ -14,7 +14,7 @@ import re
 from dataclasses import dataclass, field, asdict
 from typing import Any, Iterable, Iterator
 
-BASE_URL = "https://www.propertyguru.com.sg"
+BASE_URL = "https://www.propertyguru.com.sg"  # used for relative links
 SQM_TO_SQFT = 10.7639
 
 # "#03-45", "# 3 - 45A", "#B1-12"

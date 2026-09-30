@@ -1,4 +1,4 @@
-"""Value 3BR EC shortlist: 3-bedroom Executive Condos, 10 years old or newer, under a price cap.
+"""Value 3BR EC shortlist: 3-bedroom Executive Condos completed 2016 or later, under a price cap.
 
 Run with:  python -m pgscraper.ec_value --headful
 
@@ -60,11 +60,11 @@ def years_since(d: date, today: date) -> float:
 
 
 def eligible_projects(today: date) -> list[str]:
-    """Projects TOP'd within EC_MAX_AGE_YEARS that are past MOP (so can be resold)."""
+    """Projects TOP'd in EC_MIN_TOP_YEAR or later that are past MOP (so can be resold)."""
     out = []
     for name, (top, *_rest) in config.EC_PROJECTS.items():
-        age = years_since(date.fromisoformat(top), today)
-        if config.EC_MOP_YEARS <= age <= config.EC_MAX_AGE_YEARS:
+        top_date = date.fromisoformat(top)
+        if top_date.year >= config.EC_MIN_TOP_YEAR and years_since(top_date, today) >= config.EC_MOP_YEARS:
             out.append(name)
     return out
 
@@ -134,7 +134,7 @@ def write_deck(path: Path, items: list[ECListing], today: date, contact: str) ->
 <section class="slide cover">
   <div class="kicker">Value 3BR · Executive Condos</div>
   <h1>3-bedroom ECs under {_fmt_money(config.EC_MAX_PRICE)}</h1>
-  <p class="sub">{config.EC_MIN_SQFT:,}+ sqft · completed within the last {config.EC_MAX_AGE_YEARS} years ·
+  <p class="sub">{config.EC_MIN_SQFT:,}+ sqft · completed {config.EC_MIN_TOP_YEAR} or later ·
      past MOP, open to all buyers</p>
   <div class="stats">
     <div><b>{len(items)}</b><span>listings</span></div>

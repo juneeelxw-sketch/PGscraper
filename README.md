@@ -47,8 +47,8 @@ Search URLs and match terms live in `pgscraper/config.py`.
 python -m pgscraper.ec_value --headful --contact "Your Name · 9123 4567"
 ```
 
-Finds **3-bedroom Executive Condos, 1,000+ sqft, asking S$1.6M or less, in projects that TOP'd within
-the last 10 years and are past their 5-year MOP**. It re-checks every listing in
+Finds **3-bedroom Executive Condos, 1,000+ sqft, asking S$1.6M or less, in projects that TOP'd in
+2016 or later and are past their 5-year MOP**. It re-checks every listing in
 `data/ec_value_3br_shortlist.csv`, searches PropertyGuru for more in each eligible project, opens each
 listing for bedrooms, size and photos, and drops anything sold, withdrawn or outside the criteria.
 

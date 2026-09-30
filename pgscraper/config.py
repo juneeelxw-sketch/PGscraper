@@ -33,12 +33,20 @@ OUTPUT_DIR = "output"
 EC_MAX_PRICE = 1_600_000
 EC_MIN_SQFT = 1000
 EC_BEDROOMS = 3
-EC_MAX_AGE_YEARS = 10  # counted from TOP
+EC_MIN_TOP_YEAR = 2016  # oldest TOP year to include (The Topiary's year)
 EC_MOP_YEARS = 5  # ECs can't be resold on the open market before this
 
-# ECs with TOP in the last ~10 years, with their TOP date (source: executive-condominium.com/ecs-top-date).
+# ECs with TOP in 2016 or later, with their TOP date (source: executive-condominium.com/ecs-top-date).
 # The age/MOP rules above decide which are in play on a given day; add new projects here as they TOP.
 EC_PROJECTS = {
+    "Waterbay": ("2016-01-27", "Edgefield Plains", "Punggol"),
+    "CityLife @ Tampines": ("2016-02-03", "Tampines Central 7", "Tampines"),
+    "Twin Fountains": ("2016-03-14", "Woodlands Avenue 6", "Woodlands"),
+    "The Topiary": ("2016-03-22", "Fernvale Lane", "Sengkang"),
+    "Forestville": ("2016-04-01", "Woodlands Drive 16", "Woodlands"),
+    "Lush Acres": ("2016-07-30", "Sengkang West Way", "Sengkang"),
+    "SkyPark Residences": ("2016-08-10", "Sembawang Crescent", "Sembawang"),
+    "Ecopolitan": ("2016-08-29", "Punggol Walk", "Punggol"),
     "Sea Horizon": ("2016-10-07", "Pasir Ris Rise", "Pasir Ris"),
     "The Amore": ("2016-11-28", "Edgedale Plains", "Punggol"),
     "Lake Life": ("2016-12-30", "Tao Ching Road / Yuan Ching Road", "Jurong West"),

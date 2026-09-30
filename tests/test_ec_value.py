@@ -31,12 +31,13 @@ def test_extract_photos_keeps_biggest_and_skips_agents_and_other_listings():
     ]
 
 
-def test_eligible_projects_need_mop_and_max_10_years():
+def test_eligible_projects_need_mop_and_top_2016_or_later():
     today = date(2026, 9, 30)
     ok = ec_value.eligible_projects(today)
     assert "Sea Horizon" in ok and "Rivercove Residences" in ok
     assert "Piermont Grand" not in ok  # still within MOP
-    assert "Forestville" not in ok  # not in the list: TOP'd Apr 2016, over 10 years
+    assert "The Topiary" in ok and "Waterbay" in ok  # TOP'd early 2016
+    assert "Waterwoods" not in ok  # TOP'd Dec 2015, not in the list
 
 
 # ---------------------------------------------------------------- end to end

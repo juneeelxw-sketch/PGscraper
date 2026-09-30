@@ -38,6 +38,7 @@ class ECListing:
     listing: Listing
     project: str
     bedrooms: int | None = None
+    layout: str = ""  # agent's own read of the layout, e.g. "3 + study"; overrides the bedroom check
     photo_urls: list[str] = field(default_factory=list)
     photo_files: list[Path] = field(default_factory=list)
     note: str = ""
@@ -96,7 +97,7 @@ def fits(ec: ECListing) -> bool:
         return False
     if l.size_sqft is not None and l.size_sqft < config.EC_MIN_SQFT:
         return False
-    if ec.bedrooms is not None and ec.bedrooms != config.EC_BEDROOMS:
+    if not ec.layout and ec.bedrooms is not None and ec.bedrooms != config.EC_BEDROOMS:
         return False
     return True
 
@@ -114,7 +115,7 @@ def load_shortlist(path: str, projects: list[str]) -> list[ECListing]:
                         title=r["project"], address=r.get("block_address", ""),
                         price=int(r["price"]) if r.get("price") else None,
                         size_sqft=float(r["size_sqft"]) if r.get("size_sqft") else None)
-            out.append(ECListing(l, r["project"], note=r.get("check", "")))
+            out.append(ECListing(l, r["project"], note=r.get("check") or "", layout=r.get("layout") or ""))
     return out
 
 
@@ -180,7 +181,7 @@ def write_deck(path: Path, items: list[ECListing], today: date, contact: str) ->
         age = years_since(i.top, today)
         facts = [("Asking", _fmt_money(l.price)), ("Size", f"{l.size_sqft or 0:,.0f} sqft"),
                  ("PSF", _fmt_money(round(l.psf)) if l.psf else "-"),
-                 ("Bedrooms", str(i.bedrooms or config.EC_BEDROOMS)),
+                 ("Bedrooms", i.layout or str(i.bedrooms or config.EC_BEDROOMS)),
                  ("TOP", f"{i.top:%b %Y} ({age:.0f} yrs)"), ("Tenure", "99-yr lease")]
         if l.floor_hint:
             facts.append(("Floor", l.floor_hint))
@@ -244,7 +245,7 @@ def write_xlsx(path: Path, items: list[ECListing], today: date,
         c.font = Font(bold=True)
     for i in items:
         l = i.listing
-        ws.append([i.project, i.area, i.top.isoformat(), round(years_since(i.top, today), 1), i.bedrooms,
+        ws.append([i.project, i.area, i.top.isoformat(), round(years_since(i.top, today), 1), i.layout or i.bedrooms,
                    l.size_sqft, l.price, l.psf, l.address, l.floor_hint, l.agent, len(i.photo_files),
                    i.note, l.url])
         ws.cell(ws.max_row, len(headers)).hyperlink = l.url

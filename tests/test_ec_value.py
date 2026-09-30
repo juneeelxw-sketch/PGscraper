@@ -138,3 +138,11 @@ def test_project_of_ignores_punctuation():
     assert ec_value.project_of(l, ["CityLife @ Tampines", "The Vales"]) == "CityLife @ Tampines"
     l2 = Listing("2", title="Northwave EC Executive Condominium")
     assert ec_value.project_of(l2, ["Northwave"]) == "Northwave"
+
+
+def test_layout_override_keeps_a_listed_4_bed():
+    from pgscraper.parse import Listing
+    ec = ec_value.ECListing(Listing("1", price=1_600_000, size_sqft=1270), "Northwave", bedrooms=4)
+    assert not ec_value.fits(ec)
+    ec.layout = "3 + study"
+    assert ec_value.fits(ec)

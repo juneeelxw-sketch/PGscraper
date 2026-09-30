@@ -1,4 +1,4 @@
-project,listing_id,price,size_sqft,block_address,check,url
+project,listing_id,price,size_sqft,block_address,check,url,layout
 The Criterion,500212712,1430000,1023,7 Yishun Street 51,,https://www.propertyguru.com.sg/listing/for-sale-the-criterion-500212712
 The Criterion,500207742,1449999,1023,1 Yishun Street 51,,https://www.propertyguru.com.sg/listing/for-sale-the-criterion-500207742
 The Criterion,500229851,1450000,1033,7 Yishun Street 51,,https://www.propertyguru.com.sg/listing/for-sale-the-criterion-500229851
@@ -54,3 +54,4 @@ Sea Horizon,500223553,1550000,1152,Pasir Ris Rise,,https://www.propertyguru.com.
 Sea Horizon,500270682,1580000,1130,Pasir Ris Rise,,https://www.propertyguru.com.sg/listing/for-sale-sea-horizon-500270682
 Sol Acres,500235197,1599000,1066,Choa Chu Kang Grove,low floor; pool view,https://www.propertyguru.com.sg/listing/for-sale-sol-acres-500235197
 Twin Fountains,60145981,1360000,1055,11 Woodlands Avenue 6,older listing ID; price seen as $1.36M and $1.5M - confirm,https://www.propertyguru.com.sg/listing/for-sale-twin-fountains-60145981
+Northwave,60047599,1600000,1270,105 Woodlands View,listed as 4-bed; June reads it as 3 + study; pool-facing patio unit; older listing ID,https://www.propertyguru.com.sg/listing/for-sale-northwave-ec-60047599,3 + study

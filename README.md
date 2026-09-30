@@ -41,6 +41,24 @@ Useful flags: `--no-details` (don't open each listing page; faster, fewer unit n
 `--headful` (visible browser, local machine only), `--url <search url>` (custom search).
 Search URLs and match terms live in `pgscraper/config.py`.
 
+## Rental search (`--rental`)
+
+```bash
+python -m pgscraper --rental --headful
+```
+
+Searches whole-unit 3-bedroom rentals near the NEL / CCL / TEL stations listed in
+`pgscraper/config.py` (`RENTAL_*` settings). It drops HDB flats, room rentals, units over the
+rent cap and units below the size floor, then marks each remaining listing **IDEAL** (within the
+target rent and size, 2+ bathrooms) or **CLOSE** (with a note saying what's off). Change the
+stations, limits or targets in `config.py`.
+
+| File | What |
+|---|---|
+| `output/rentals_<date>.xlsx` | **Listings** (IDEAL first, then by rent; nearest MRT; what's not ideal), **Changes**, **Price History** |
+| `output/latest_rentals.csv` | Current matching rentals, flat |
+| `data/rental_observations.csv` | Rental run log, kept separately from the sale log |
+
 ## How it works
 
 1. Opens the PropertyGuru search results in headless Chromium and pages through them.

@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-from . import config, history, report
+from . import config, history, rental, report
 from .fetch import BlockedError, Fetcher, page_url
 from .parse import (Listing, enrich_from_detail, listing_from_card, listings_from_next_data,
                     matches_project, next_data_from_html)
@@ -40,12 +40,16 @@ def crawl(fetcher: Fetcher, search_urls: list[str], max_pages: int, log) -> list
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pgscraper", description=f"Scrape PropertyGuru sale listings for "
-                                                               f"{config.PROJECT_NAME}.")
+                                                               f"{config.PROJECT_NAME}, or with --rental, "
+                                                               f"{config.RENTAL_NAME}.")
+    ap.add_argument("--rental", action="store_true", help="run the rental search set up in config.py "
+                                                         "(RENTAL_* settings) instead of the sale search")
     ap.add_argument("--url", action="append", help="search URL to crawl (repeatable; overrides config)")
     ap.add_argument("--max-pages", type=int, default=config.MAX_PAGES)
     ap.add_argument("--no-details", action="store_true", help="skip visiting each listing page "
                                                               "(faster, but finds fewer unit numbers)")
-    ap.add_argument("--no-filter", action="store_true", help=f"keep listings not matching {config.PROJECT_NAME}")
+    ap.add_argument("--no-filter", action="store_true", help=f"keep listings not matching {config.PROJECT_NAME} "
+                                                             "(or, with --rental, the rent/size/type limits)")
     ap.add_argument("--dry-run", action="store_true", help="don't add this run to the history log")
     ap.add_argument("--headful", action="store_true", help="show the browser window (needs a display)")
     ap.add_argument("--debug", action="store_true", help="save raw HTML of every page to debug/")
@@ -54,15 +58,23 @@ def main(argv: list[str] | None = None) -> int:
     log = lambda m: print(m, file=sys.stderr)  # noqa: E731
     now = datetime.now(ZoneInfo("Asia/Singapore"))
     run_at = now.strftime("%Y-%m-%d %H:%M")
+    if args.rental:
+        name, urls, history_csv, prefix = (config.RENTAL_NAME, config.RENTAL_SEARCH_URLS,
+                                           config.RENTAL_HISTORY_CSV, "rentals")
+        keep = lambda ls: rental.select(ls, log)  # noqa: E731
+    else:
+        name, urls, history_csv, prefix = (config.PROJECT_NAME, config.SEARCH_URLS, config.HISTORY_CSV,
+                                           "ubi_techpark")
+        keep = lambda ls: [l for l in ls if matches_project(l, config.MATCH_TERMS)]  # noqa: E731
 
     try:
         with Fetcher(headless=not args.headful, delay=config.PAGE_DELAY_SECONDS,
                      debug_dir="debug" if args.debug else None) as f:
             log("Searching PropertyGuru...")
-            listings = crawl(f, args.url or config.SEARCH_URLS, args.max_pages, log)
+            listings = crawl(f, args.url or urls, args.max_pages, log)
             if not args.no_filter:
-                listings = [l for l in listings if matches_project(l, config.MATCH_TERMS)]
-            log(f"{len(listings)} {config.PROJECT_NAME} listings found.")
+                listings = keep(listings)
+            log(f"{len(listings)} {name} listings found.")
 
             if not args.no_details:
                 for i, l in enumerate(listings, 1):
@@ -74,6 +86,8 @@ def main(argv: list[str] | None = None) -> int:
                         raise
                     except Exception as e:  # one bad page shouldn't sink the run
                         log(f"    skipped ({e})")
+                if args.rental and not args.no_filter:  # detail pages can reveal size/beds/type
+                    listings = keep(listings)
     except BlockedError as e:
         log(f"ERROR: {e}\nNothing was saved.")
         return 2
@@ -83,24 +97,28 @@ def main(argv: list[str] | None = None) -> int:
             "re-run with --debug and inspect debug/*.html. History was not updated.")
         return 1
 
-    prior = history.load(config.HISTORY_CSV)
+    prior = history.load(history_csv)
     changes = history.diff(listings, prior)
 
     stamp = now.strftime("%Y-%m-%d_%H%M")
     out = Path(config.OUTPUT_DIR)
-    xlsx = out / f"ubi_techpark_{stamp}.xlsx"
-    report.write_xlsx(xlsx, listings, changes, prior, run_at)
-    report.write_csv(out / "latest.csv", listings, changes)
+    xlsx = out / f"{prefix}_{stamp}.xlsx"
+    latest = out / ("latest_rentals.csv" if args.rental else "latest.csv")
+    report.write_xlsx(xlsx, listings, changes, prior, run_at, rental=args.rental)
+    report.write_csv(latest, listings, changes)
     if not args.dry_run:
-        history.append(config.HISTORY_CSV, listings, run_at)
+        history.append(history_csv, listings, run_at)
 
     counts: dict[str, int] = {}
     for c in changes:
         counts[c.status] = counts.get(c.status, 0) + 1
     no_unit = sum(1 for l in listings if not l.unit_no)
-    log(f"\nSaved {xlsx}  and  {out / 'latest.csv'}")
+    log(f"\nSaved {xlsx}  and  {latest}")
     log("Summary: " + ", ".join(f"{k.lower()} {v}" for k, v in sorted(counts.items())))
-    if no_unit:
+    if args.rental:
+        ideal = sum(1 for l in listings if rental.grade(l)[0] == rental.IDEAL)
+        log(f"{ideal} listing(s) meet the ideal brief (see the Fit column).")
+    elif no_unit:
         log(f"{no_unit} listing(s) don't state a unit number (shown as '(not stated)').")
     return 0
 

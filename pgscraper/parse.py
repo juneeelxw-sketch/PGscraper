@@ -27,6 +27,12 @@ _FLOOR_HINT_RE = re.compile(
 _SQFT_RE = re.compile(r"([\d,]+(?:\.\d+)?)\s*(?:sq\.?\s?ft|sqft|square feet|sf)\b", re.I)
 _SQM_RE = re.compile(r"([\d,]+(?:\.\d+)?)\s*(?:sq\.?\s?m|sqm|m²|square met)", re.I)
 _MONEY_RE = re.compile(r"(?:S\$|\$)\s*([\d,]+(?:\.\d+)?)\s*(m|mil|million|k)?\b", re.I)
+_BEDS_RE = re.compile(r"\b(\d{1,2})\s*-?\s*(?:beds?|bedrooms?|br)\b", re.I)
+_BATHS_RE = re.compile(r"\b(\d{1,2})\s*-?\s*(?:baths?|bathrooms?)\b", re.I)
+# "4 min (340 m) from NE15 Buangkok MRT Station"
+_MRT_RE = re.compile(r"\d+\s*mins?\s*\([\d.,]+\s*k?m\)\s*from\s+[A-Z]{2}\d+[^|\n]*?(?:MRT Station|LRT Station|Station|MRT)", re.I)
+_TYPE_TERMS = ["executive condo", "condominium", "apartment", "cluster house", "semi-detached house",
+               "detached house", "corner terrace", "terraced house", "hdb"]
 
 
 @dataclass
@@ -43,6 +49,10 @@ class Listing:
     agency: str = ""
     listed_date: str = ""
     tenure: str = ""
+    bedrooms: int | None = None
+    bathrooms: int | None = None
+    property_type: str = ""
+    mrt: str = ""  # e.g. "4 min (340 m) from NE15 Buangkok MRT Station"
     text: str = field(default="", repr=False)  # searchable text blob
 
     @property
@@ -76,6 +86,44 @@ def extract_units(text: str) -> str:
 def extract_floor_hint(text: str) -> str:
     m = _FLOOR_HINT_RE.search(text or "")
     return m.group(1).title() if m else ""
+
+
+def _count(value: Any, rx: re.Pattern) -> int | None:
+    """Parse a bedroom/bathroom count from 3, "3", {"value": 3} or "3 Beds"."""
+    if isinstance(value, dict):
+        value = _first(value, "value", "count", "pretty")
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return int(value) if value > 0 else None
+    s = str(value).strip()
+    if s.isdigit():
+        return int(s) or None
+    m = rx.search(s)
+    return int(m.group(1)) if m else None
+
+
+def extract_beds(text: str) -> int | None:
+    return _count(text, _BEDS_RE)
+
+
+def extract_baths(text: str) -> int | None:
+    return _count(text, _BATHS_RE)
+
+
+def extract_mrt(text: str) -> str:
+    m = _MRT_RE.search(text or "")
+    return re.sub(r"\s+", " ", m.group(0)).strip() if m else ""
+
+
+def extract_property_type(text: str) -> str:
+    low = (text or "").lower()
+    if "room rental" in low:
+        return "Room Rental"
+    for t in _TYPE_TERMS:
+        if t in low:
+            return "HDB" if t == "hdb" else t.title()
+    return ""
 
 
 def parse_money(value: Any) -> int | None:
@@ -261,6 +309,10 @@ def listing_from_dict(d: dict) -> Listing | None:
         if not tenure and "tenure" in p:
             tenure = v
 
+    ptype = _first(d, "propertyType", "propertyTypeText", "propertyTypeCode")
+    if isinstance(ptype, dict):
+        ptype = _first(ptype, "text", "name", "value", "code")
+
     return Listing(
         listing_id=lid,
         url=url,
@@ -274,6 +326,10 @@ def listing_from_dict(d: dict) -> Listing | None:
         agency=agency,
         listed_date=listed,
         tenure=tenure,
+        bedrooms=_count(_first(d, "bedrooms", "beds", "bedroom"), _BEDS_RE) or extract_beds(text),
+        bathrooms=_count(_first(d, "bathrooms", "baths", "bathroom"), _BATHS_RE) or extract_baths(text),
+        property_type=str(ptype) if ptype else extract_property_type(text),
+        mrt=extract_mrt(text),
         text=text,
     )
 
@@ -312,6 +368,10 @@ def listing_from_card(card: dict) -> Listing | None:
         floor_hint=extract_floor_hint(text),
         price=parse_money(text),
         size_sqft=parse_sqft(text),
+        bedrooms=extract_beds(text),
+        bathrooms=extract_baths(text),
+        property_type=extract_property_type(text),
+        mrt=extract_mrt(text),
         text=text,
     )
 
@@ -338,10 +398,18 @@ def enrich_from_detail(listing: Listing, html: str, page_text: str) -> None:
                 listing.agency = listing.agency or fresh.agency
                 listing.tenure = listing.tenure or fresh.tenure
                 listing.listed_date = listing.listed_date or fresh.listed_date
+                listing.bedrooms = listing.bedrooms or fresh.bedrooms
+                listing.bathrooms = listing.bathrooms or fresh.bathrooms
+                listing.property_type = listing.property_type or fresh.property_type
+                listing.mrt = listing.mrt or fresh.mrt
     if not listing.unit_no:
         listing.unit_no = extract_units(detail_text)
     if not listing.floor_hint:
         listing.floor_hint = extract_floor_hint(page_text)
     if not listing.size_sqft:
         listing.size_sqft = parse_sqft(page_text)
+    listing.bedrooms = listing.bedrooms or extract_beds(page_text)
+    listing.bathrooms = listing.bathrooms or extract_baths(page_text)
+    listing.property_type = listing.property_type or extract_property_type(page_text)
+    listing.mrt = listing.mrt or extract_mrt(page_text)
     listing.text += " | " + page_text

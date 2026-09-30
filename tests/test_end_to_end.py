@@ -67,3 +67,30 @@ def test_cli_end_to_end(server, tmp_path, monkeypatch):
     wb = load_workbook(sorted((tmp_path / "out").glob("*.xlsx"))[-1])
     statuses = [r[0] for r in wb["Changes"].iter_rows(min_row=2, values_only=True)]
     assert statuses == ["PRICE DOWN", "REMOVED"]
+
+
+def rent_item(i, price, sqft, beds, ptype="Condominium"):
+    return {"id": i, "url": f"/listing/for-rent-{i}", "title": f"Condo {i}", "address": "1 Kovan Rd",
+            "price": {"value": price}, "floorArea": {"value": sqft}, "bedrooms": beds, "bathrooms": 2,
+            "propertyType": {"text": ptype}}
+
+
+def test_cli_rental(server, tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "RENTAL_HISTORY_CSV", str(tmp_path / "rent.csv"))
+    monkeypatch.setattr(config, "OUTPUT_DIR", str(tmp_path / "out"))
+    monkeypatch.setattr(config, "PAGE_DELAY_SECONDS", (0, 0))
+    monkeypatch.setattr("pgscraper.parse.BASE_URL", server)
+    PAGES["/apartment-condo-for-rent/near-kovan"] = page([
+        rent_item(700001, 4800, 1130, 3), rent_item(700002, 5600, 1250, 3),
+        rent_item(700003, 3200, 1100, 3, "HDB 5 Room"), rent_item(700004, 8000, 1500, 3)])
+    PAGES["/apartment-condo-for-rent/near-kovan/2"] = page([])
+    for i in (700001, 700002):
+        PAGES[f"/listing/for-rent-{i}"] = "<html><body>5 min (400 m) from NE13 Kovan MRT Station</body></html>"
+
+    assert cli.main(["--rental", "--url", f"{server}/apartment-condo-for-rent/near-kovan"]) == 0
+    from openpyxl import load_workbook
+    ws = load_workbook(next((tmp_path / "out").glob("rentals_*.xlsx")))["Listings"]
+    rows = list(ws.iter_rows(min_row=2, values_only=True))
+    assert [(r[0], r[3]) for r in rows] == [("IDEAL", 4800), ("CLOSE", 5600)]
+    assert rows[0][9] == "5 min (400 m) from NE13 Kovan MRT Station"
+    assert (tmp_path / "rent.csv").exists()

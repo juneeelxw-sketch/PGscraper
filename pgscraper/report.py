@@ -12,6 +12,7 @@ from openpyxl.utils import get_column_letter
 
 from .history import Change
 from .parse import Listing
+from .rental import IDEAL, grade
 
 MONEY = '"S$"#,##0'
 MONEY_SIGNED = '"+S$"#,##0;"-S$"#,##0;0'
@@ -61,13 +62,65 @@ def _color_status(ws, col: int = 1) -> None:
                 c.fill = PatternFill("solid", fgColor=fill)
 
 
+def _rental_sheet(wb: Workbook, listings: list[Listing], by_id: dict[str, Change]) -> None:
+    rows = []
+    for l in listings:
+        fit, note = grade(l)
+        ch = by_id.get(l.listing_id)
+        rows.append([
+            fit, ch.status if ch else "", l.title, l.price, l.size_sqft, l.psf, l.bedrooms, l.bathrooms,
+            l.property_type, l.mrt, note, ch.prev_price if ch and ch.status.startswith("PRICE") else None,
+            ch.first_seen if ch else "", l.address, l.agent, l.listed_date, l.listing_id, l.url,
+        ])
+    rows.sort(key=lambda r: (r[0] != IDEAL, r[3] or 0))
+    ws = _sheet(wb, "Listings",
+                ["Fit", "Status", "Development", "Rent", "Size (sqft)", "PSF", "Beds", "Baths", "Type",
+                 "Nearest MRT", "Why not ideal", "Prev Rent", "First Seen", "Address", "Agent", "Listed",
+                 "Listing ID", "URL"],
+                rows, {"Rent": MONEY, "Prev Rent": MONEY, "Size (sqft)": SQFT, "PSF": PSF})
+    _color_status(ws, col=2)
+    for row in ws.iter_rows(min_row=2):
+        if row[0].value == IDEAL:
+            row[0].fill = PatternFill("solid", fgColor=STATUS_FILL["NEW"])
+
+
 def write_xlsx(path: Path, listings: list[Listing], changes: list[Change], history_rows: list[dict],
-               run_at: str) -> None:
+               run_at: str, rental: bool = False) -> None:
     wb = Workbook()
     wb.remove(wb.active)
     by_id = {c.listing_id: c for c in changes}
 
-    # 1. Current listings, cheapest psf first
+    if rental:
+        _rental_sheet(wb, listings, by_id)
+    else:
+        _sale_sheets(wb, listings, by_id)
+
+    # What changed since last run
+    order = ["NEW", "RELISTED", "PRICE DOWN", "PRICE UP", "REMOVED"]
+    rows = [[c.status, c.unit_no or "(not stated)", c.prev_price, c.price, c.price_change, c.size_sqft,
+             c.first_seen, c.title, c.agent, c.url]
+            for c in sorted(changes, key=lambda c: order.index(c.status) if c.status in order else 99)
+            if c.status != "UNCHANGED"]
+    ws = _sheet(wb, "Changes",
+                ["Status", "Unit No.", "Prev Price", "Price", "Change", "Size (sqft)", "First Seen",
+                 "Title", "Agent", "URL"],
+                rows, {"Prev Price": MONEY, "Price": MONEY, "Change": MONEY_SIGNED, "Size (sqft)": SQFT})
+    _color_status(ws)
+
+    # Full log, including this run
+    all_rows = history_rows + [{"run_at": run_at, **l.to_row()} for l in listings]
+    rows = [[r["run_at"], r["unit_no"], _f(r["price"]), _f(r["size_sqft"]), _f(r["psf"]), r["agent"],
+             r["listing_id"], r["url"]] for r in all_rows]
+    _sheet(wb, "Price History", ["Run At", "Unit No.", "Price", "Size (sqft)", "PSF", "Agent", "Listing ID",
+                                 "URL"],
+           rows, {"Price": MONEY, "Size (sqft)": SQFT, "PSF": PSF})
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    wb.save(path)
+
+
+def _sale_sheets(wb: Workbook, listings: list[Listing], by_id: dict[str, Change]) -> None:
+    # Current listings, cheapest psf first
     rows = []
     for l in sorted(listings, key=lambda l: (l.psf is None, l.psf or 0)):
         ch = by_id.get(l.listing_id)
@@ -82,19 +135,7 @@ def write_xlsx(path: Path, listings: list[Listing], changes: list[Change], histo
                 rows, {"Price": MONEY, "Prev Price": MONEY, "Size (sqft)": SQFT, "PSF": PSF})
     _color_status(ws)
 
-    # 2. What changed since last run
-    order = ["NEW", "RELISTED", "PRICE DOWN", "PRICE UP", "REMOVED"]
-    rows = [[c.status, c.unit_no or "(not stated)", c.prev_price, c.price, c.price_change, c.size_sqft,
-             c.first_seen, c.title, c.agent, c.url]
-            for c in sorted(changes, key=lambda c: order.index(c.status) if c.status in order else 99)
-            if c.status != "UNCHANGED"]
-    ws = _sheet(wb, "Changes",
-                ["Status", "Unit No.", "Prev Price", "Price", "Change", "Size (sqft)", "First Seen",
-                 "Title", "Agent", "URL"],
-                rows, {"Prev Price": MONEY, "Price": MONEY, "Change": MONEY_SIGNED, "Size (sqft)": SQFT})
-    _color_status(ws)
-
-    # 3. One line per unit (the same unit is often listed by several agents)
+    # One line per unit (the same unit is often listed by several agents)
     groups: dict[str, list[Listing]] = defaultdict(list)
     for l in listings:
         for u in (l.unit_no.split(", ") if l.unit_no else ["(not stated)"]):
@@ -112,17 +153,6 @@ def write_xlsx(path: Path, listings: list[Listing], changes: list[Change], histo
                            "Lowest PSF", "Agents"],
            rows, {"Lowest Price": MONEY, "Highest Price": MONEY, "Lowest PSF": PSF}, link_col=None)
 
-    # 4. Full log, including this run
-    all_rows = history_rows + [{"run_at": run_at, **l.to_row()} for l in listings]
-    rows = [[r["run_at"], r["unit_no"], _f(r["price"]), _f(r["size_sqft"]), _f(r["psf"]), r["agent"],
-             r["listing_id"], r["url"]] for r in all_rows]
-    _sheet(wb, "Price History", ["Run At", "Unit No.", "Price", "Size (sqft)", "PSF", "Agent", "Listing ID",
-                                 "URL"],
-           rows, {"Price": MONEY, "Size (sqft)": SQFT, "PSF": PSF})
-
-    path.parent.mkdir(parents=True, exist_ok=True)
-    wb.save(path)
-
 
 def _f(v):
     try:
@@ -137,7 +167,8 @@ def write_csv(path: Path, listings: list[Listing], changes: list[Change]) -> Non
     with path.open("w", newline="", encoding="utf-8") as f:
         w = csv.writer(f)
         w.writerow(["status", "unit_no", "floor_hint", "price", "size_sqft", "psf", "title", "agent",
-                    "listing_id", "url"])
+                    "listing_id", "url", "bedrooms", "bathrooms", "property_type", "mrt"])
         for l in listings:
             w.writerow([status.get(l.listing_id, ""), l.unit_no, l.floor_hint, l.price, l.size_sqft, l.psf,
-                        l.title, l.agent, l.listing_id, l.url])
+                        l.title, l.agent, l.listing_id, l.url, l.bedrooms, l.bathrooms, l.property_type,
+                        l.mrt])

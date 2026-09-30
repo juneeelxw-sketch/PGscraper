@@ -64,9 +64,9 @@ RENTAL_SEARCH_URLS = (
 )
 
 # Listings outside these limits are dropped; the rest are graded in the report.
-RENTAL_MAX_RENT = 6000      # show near misses up to this
+RENTAL_MAX_RENT = 5500      # show near misses up to this
 RENTAL_IDEAL_RENT = 5000    # client's target
-RENTAL_MIN_SQFT = 950       # show slightly smaller units down to this
+RENTAL_MIN_SQFT = 900       # show slightly smaller units down to this
 RENTAL_IDEAL_SQFT = 1100    # client's target size
 RENTAL_MIN_BEDS = 3
 RENTAL_MIN_BATHS = 2

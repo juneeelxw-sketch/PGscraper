@@ -81,7 +81,7 @@ def test_cli_rental(server, tmp_path, monkeypatch):
     monkeypatch.setattr(config, "PAGE_DELAY_SECONDS", (0, 0))
     monkeypatch.setattr("pgscraper.parse.BASE_URL", server)
     PAGES["/apartment-condo-for-rent/near-kovan"] = page([
-        rent_item(700001, 4800, 1130, 3), rent_item(700002, 5600, 1250, 3),
+        rent_item(700001, 4800, 1130, 3), rent_item(700002, 5400, 1250, 3),
         rent_item(700003, 3200, 1100, 3, "HDB 5 Room"), rent_item(700004, 8000, 1500, 3)])
     PAGES["/apartment-condo-for-rent/near-kovan/2"] = page([])
     for i in (700001, 700002):
@@ -91,6 +91,6 @@ def test_cli_rental(server, tmp_path, monkeypatch):
     from openpyxl import load_workbook
     ws = load_workbook(next((tmp_path / "out").glob("rentals_*.xlsx")))["Listings"]
     rows = list(ws.iter_rows(min_row=2, values_only=True))
-    assert [(r[0], r[3]) for r in rows] == [("IDEAL", 4800), ("CLOSE", 5600)]
+    assert [(r[0], r[3]) for r in rows] == [("IDEAL", 4800), ("CLOSE", 5400)]
     assert rows[0][9] == "5 min (400 m) from NE13 Kovan MRT Station"
     assert (tmp_path / "rent.csv").exists()

@@ -49,13 +49,13 @@ python -m pgscraper.ec_value --headful --contact "Your Name · 9123 4567"
 
 Finds **3-bedroom Executive Condos, 1,000+ sqft, asking S$1.6M or less, in projects that TOP'd in
 2016 or later and are past their 5-year MOP**. It re-checks every listing in
-`data/ec_value_3br_shortlist.csv`, searches PropertyGuru for more in each eligible project, opens each
+`data/ec_value_3br_shortlist.csv`, crawls every eligible project's own PropertyGuru page plus a keyword search (up to 10 pages each), opens each
 listing for bedrooms, size and photos, and drops anything sold, withdrawn or outside the criteria.
 
 | File | What |
 |---|---|
 | `output/ec_value_3br_<date>/deck.html` | Slide deck: cover, "at a glance" table, one slide per listing with photos. Open in Chrome → Print → Save as PDF to send. |
-| `output/ec_value_3br_<date>/shortlist.xlsx` | Same listings with agent, notes and links, for your own follow-up |
+| `output/ec_value_3br_<date>/shortlist.xlsx` | Same listings with agent, notes and links; a **Coverage** sheet shows, per project, how many listings were for sale and how many fit, so you can spot a project that came back empty |
 | `output/ec_value_3br_<date>/photos/` | Downloaded listing photos |
 
 Criteria, the project list with TOP dates, and photos per listing are in `pgscraper/config.py`

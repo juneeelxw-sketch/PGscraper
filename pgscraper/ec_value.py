@@ -16,6 +16,7 @@ import argparse
 import base64
 import csv
 import html as htmllib
+import re
 import sys
 from dataclasses import dataclass, field
 from datetime import date, datetime
@@ -69,12 +70,24 @@ def eligible_projects(today: date) -> list[str]:
     return out
 
 
+def _squash(s: str) -> str:
+    """"CityLife @ Tampines" and "citylife-tampines" -> "citylifetampines"."""
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
 def project_of(listing: Listing, projects: list[str]) -> str | None:
-    hay = " ".join([listing.title, listing.address, listing.url.replace("-", " ")]).lower()
+    hay = _squash(" ".join([listing.title, listing.address, listing.url]))
     for p in sorted(projects, key=len, reverse=True):  # "The Vales" before "Vales"
-        if p.lower() in hay:
+        if _squash(p) in hay:
             return p
     return None
+
+
+def search_urls(project: str) -> list[str]:
+    """The project's own PropertyGuru page (when known) plus a keyword search."""
+    info = config.EC_PROJECTS[project]
+    urls = [config.EC_PROJECT_URL.format(slug=info[3])] if len(info) > 3 and info[3] else []
+    return urls + [config.EC_SEARCH_URL.format(q=quote_plus(project))]
 
 
 def fits(ec: ECListing) -> bool:
@@ -219,7 +232,8 @@ th{{color:var(--muted);font-weight:600}} .n{{text-align:right;font-variant-numer
 </style></head><body>{''.join(slides)}</body></html>""", encoding="utf-8")
 
 
-def write_xlsx(path: Path, items: list[ECListing], today: date) -> None:
+def write_xlsx(path: Path, items: list[ECListing], today: date,
+               coverage: dict[str, tuple[int, int]] | None = None) -> None:
     wb = Workbook()
     ws = wb.active
     ws.title = "Shortlist"
@@ -238,6 +252,16 @@ def write_xlsx(path: Path, items: list[ECListing], today: date) -> None:
         for cell in ws[col][1:]:
             cell.number_format = fmt
     ws.freeze_panes = "A2"
+
+    if coverage:
+        cov = wb.create_sheet("Coverage")
+        cov.append(["Project", "TOP", "Listings for sale seen", "Within price/size", "In shortlist", "Search pages"])
+        for c in cov[1]:
+            c.font = Font(bold=True)
+        kept = {p: sum(1 for i in items if i.project == p) for p in coverage}
+        for p, (seen, matched) in coverage.items():
+            cov.append([p, config.EC_PROJECTS[p][0], seen, matched, kept[p], "  ".join(search_urls(p))])
+        cov.freeze_panes = "A2"
     wb.save(path)
 
 
@@ -261,6 +285,7 @@ def main(argv: list[str] | None = None) -> int:
     found: dict[str, ECListing] = {e.listing.listing_id: e for e in load_shortlist(config.EC_SHORTLIST_CSV, projects)}
     out_dir = Path(config.OUTPUT_DIR) / f"ec_value_3br_{today:%Y-%m-%d}"
     photo_dir = out_dir / "photos"
+    coverage: dict[str, tuple[int, int]] = {}  # project -> (listings seen, within price/size)
 
     try:
         with Fetcher(headless=not args.headful, delay=config.PAGE_DELAY_SECONDS,
@@ -268,11 +293,15 @@ def main(argv: list[str] | None = None) -> int:
             if not args.no_search:
                 for p in projects:
                     log(f"Searching {p}...")
-                    for l in crawl(f, [config.EC_SEARCH_URL.format(q=quote_plus(p))], config.EC_MAX_PAGES, log):
-                        if l.listing_id not in found and project_of(l, [p]):
-                            ec = ECListing(l, p)
-                            if fits(ec):
-                                found[l.listing_id] = ec
+                    seen = [l for l in crawl(f, search_urls(p), config.EC_MAX_PAGES, log) if project_of(l, [p])]
+                    matched = 0
+                    for l in seen:
+                        ec = ECListing(l, p)
+                        if fits(ec):
+                            matched += 1
+                            found.setdefault(l.listing_id, ec)
+                    coverage[p] = (len(seen), matched)
+                    log(f"  {p}: {len(seen)} listings for sale, {matched} within price/size")
 
             candidates = list(found.values())
             log(f"{len(candidates)} candidate listings; opening each for bedrooms, size and photos.")
@@ -321,7 +350,11 @@ def main(argv: list[str] | None = None) -> int:
 
     out_dir.mkdir(parents=True, exist_ok=True)
     write_deck(out_dir / "deck.html", keep, today, args.contact)
-    write_xlsx(out_dir / "shortlist.xlsx", keep, today)
+    write_xlsx(out_dir / "shortlist.xlsx", keep, today, coverage)
+    empty = [p for p, (n, _) in coverage.items() if n == 0]
+    if empty:
+        log(f"WARNING: no listings at all came back for {', '.join(empty)}. PropertyGuru may have "
+            "changed its pages or blocked the run; check them by hand (see the Coverage sheet).")
     log(f"\n{len(keep)} listings kept ({dropped} dropped: sold/withdrawn or outside the criteria).")
     log(f"Deck: {out_dir / 'deck.html'}  (open in Chrome, Print > Save as PDF to send)")
     log(f"Spreadsheet: {out_dir / 'shortlist.xlsx'}")

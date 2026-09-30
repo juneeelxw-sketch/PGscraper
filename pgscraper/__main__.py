@@ -25,15 +25,18 @@ def parse_page(html: str, cards: list[dict]) -> list[Listing]:
 def crawl(fetcher: Fetcher, search_urls: list[str], max_pages: int, log) -> list[Listing]:
     listings: dict[str, Listing] = {}
     for base in search_urls:
+        seen_here: set[str] = set()  # pages run out when one adds nothing new *for this search*
         for n in range(1, max_pages + 1):
             url = page_url(base, n)
             html, _, cards = fetcher.get(url)
             found = parse_page(html, cards)
-            new = [l for l in found if l.listing_id not in listings]
+            fresh = [l for l in found if l.listing_id not in seen_here]
+            new = [l for l in fresh if l.listing_id not in listings]
             log(f"  page {n}: {len(found)} listings ({len(new)} new)  {url}")
             for l in new:
                 listings[l.listing_id] = l
-            if not new:
+            seen_here.update(l.listing_id for l in found)
+            if not fresh:
                 break
     return list(listings.values())
 

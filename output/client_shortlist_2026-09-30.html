@@ -1,0 +1,274 @@
+<title>Kovan–Buangkok Rental Shortlist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Manrope:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: single reading column; brief strip, then one card per recommended home, then compact lists. */
+:root {
+  --bg: #f6f7f9;
+  --surface: #ffffff;
+  --fg: #1c1d24;
+  --muted: #5d6070;
+  --line: #e1e3ea;
+  --accent: #6b2a8c;        /* North East Line purple, softened */
+  --accent-soft: #f1e8f6;
+  --nel: #9016b2;
+  --ccl: #e08a00;
+  --tel: #8a5424;
+  --good: #1f7a4d;
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body: "Manrope", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #15161b; --surface: #1e1f26; --fg: #ecedf2; --muted: #a3a6b5; --line: #30323c;
+    --accent: #c79be0; --accent-soft: #2c2236; --nel: #c57be0; --ccl: #f2a93b; --tel: #cf9a6a; --good: #5cc592;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #15161b; --surface: #1e1f26; --fg: #ecedf2; --muted: #a3a6b5; --line: #30323c;
+  --accent: #c79be0; --accent-soft: #2c2236; --nel: #c57be0; --ccl: #f2a93b; --tel: #cf9a6a; --good: #5cc592;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 720px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 48px; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(26px, 6vw, 34px); line-height: 1.15; }
+h2 { font-size: 20px; }
+h3 { font-size: 18px; }
+p { margin: 0; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.intro { display: grid; gap: 10px; }
+.intro p { color: var(--muted); max-width: 62ch; }
+
+.brief { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--line);
+  border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.brief div { background: var(--surface); padding: 12px 14px; display: grid; gap: 2px; }
+.brief dt { font-size: 12px; color: var(--muted); }
+.brief dd { margin: 0; font-weight: 700; }
+
+.section { display: grid; gap: 14px; }
+.section > p { color: var(--muted); }
+.cards { display: grid; gap: 12px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.card-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+.card-top > div { min-width: 0; }
+.rent { font-family: var(--display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rent small { font-family: var(--body); font-size: 13px; font-weight: 500; color: var(--muted); }
+.facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.facts b { color: var(--fg); font-weight: 600; }
+.mrt { display: inline-flex; align-items: center; gap: 6px; }
+.chip { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .03em; color: #fff; padding: 2px 6px; border-radius: 4px; }
+.chip.nel { background: var(--nel); } .chip.ccl { background: var(--ccl); } .chip.tel { background: var(--tel); }
+.why { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; }
+.links { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 14px; }
+a { color: var(--accent); font-weight: 600; text-underline-offset: 3px; }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+.list { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 520px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+td .note { color: var(--muted); font-size: 13px; }
+
+.next { background: var(--accent-soft); border-radius: 12px; padding: 16px; display: grid; gap: 8px; }
+.next ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.foot { font-size: 13px; color: var(--muted); }
+</style>
+
+<main class="wrap">
+  <header class="intro">
+    <span class="eyebrow">Rental shortlist · 30 Sep 2026</span>
+    <h1>Homes between Kovan and Buangkok for your December move</h1>
+    <p>These places keep the family close to Sengkang (work), Punggol (school) and Circuit Road (the bakery), with Ang Mo Kio reachable too. Each one has food, a supermarket and a market nearby.</p>
+  </header>
+
+  <dl class="brief" aria-label="Your brief">
+    <div><dt>Move in</dt><dd>17–25 Dec</dd></div>
+    <div><dt>Layout</dt><dd>3 bed, 2 bath</dd></div>
+    <div><dt>Size</dt><dd>About 1,100 sqft</dd></div>
+    <div><dt>Budget</dt><dd>S$5,000 or less</dd></div>
+  </dl>
+
+  <section class="section" aria-labelledby="picks">
+    <h2 id="picks">Top picks</h2>
+    <div class="cards">
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>Rio Vista</h3></div>
+          <div class="rent">S$4,500–4,545 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>1,238 sqft</b></span>
+          <span class="mrt"><span class="chip nel">NE14/15</span> Feeder bus to Hougang / Buangkok</span>
+        </div>
+        <ul class="why">
+          <li>Most space for the money: bigger than the target size and still well under budget.</li>
+          <li>Older condo with full facilities; Hougang HDB estate nearby for food and markets.</li>
+          <li>On the way to Sengkang and Punggol.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-rio-vista-500018096" target="_blank" rel="noopener">Unit A · S$4,545</a>
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-rio-vista-60176721" target="_blank" rel="noopener">Unit B · S$4,500</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>The Quartz</h3> <span class="tag">On your list</span></div>
+          <div class="rent">S$4,500–4,650 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>About 1,030–1,070 sqft</b></span>
+          <span class="mrt"><span class="chip nel">NE15</span> Buangkok, 3 min walk</span>
+        </div>
+        <ul class="why">
+          <li>24-hour FairPrice, coffee shop and clinic inside the development.</li>
+          <li>One stop to Sengkang.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-the-quartz-500258978" target="_blank" rel="noopener">Unit A · S$4,500</a>
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-the-quartz-25569411" target="_blank" rel="noopener">Unit B · S$4,600</a>
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-the-quartz-500255445" target="_blank" rel="noopener">Unit C · S$4,650</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>Jewel @ Buangkok</h3> <span class="tag">On your list</span></div>
+          <div class="rent">S$4,800 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>1,130 sqft</b></span>
+          <span class="mrt"><span class="chip nel">NE15</span> Buangkok, 4 min walk</span>
+        </div>
+        <ul class="why">
+          <li>Opposite Sengkang Grand Mall, with FairPrice and a hawker centre.</li>
+          <li>Smaller 3-bed units (926–936 sqft) are also available at S$4,400–4,600.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/property-for-rent/at-jewel-buangkok-21639" target="_blank" rel="noopener">All Jewel @ Buangkok rentals</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>Bartley Residences</h3> <span class="tag">On your list</span></div>
+          <div class="rent">S$4,800 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>1,098 sqft</b></span>
+          <span class="mrt"><span class="chip ccl">CC12</span> Bartley, 5 min walk</span>
+        </div>
+        <ul class="why">
+          <li>Closest option to the Circuit Road bakery (2 stops to MacPherson).</li>
+          <li>We'll check that the unit doesn't face the main road.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-bartley-residences-500274986" target="_blank" rel="noopener">View listing</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>Kovan Melody</h3> <span class="tag">On your list</span></div>
+          <div class="rent">S$5,000 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>1,300 sqft</b></span>
+          <span class="mrt"><span class="chip nel">NE13</span> Kovan, at the doorstep</span>
+        </div>
+        <ul class="why">
+          <li>Kovan Market &amp; Food Centre and Heartland Mall next door.</li>
+          <li>Roomier than the target, right at the budget.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/property-for-rent/at-kovan-melody-84" target="_blank" rel="noopener">All Kovan Melody rentals</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>Thomson Impressions</h3></div>
+          <div class="rent">S$5,000 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed</b></span><span><b>1,055 sqft</b></span>
+          <span class="mrt"><span class="chip tel">TE7</span> Bright Hill, 7 min walk</span>
+        </div>
+        <ul class="why">
+          <li>Closest option to Ang Mo Kio (Pathlight), with an unblocked landed view.</li>
+          <li>Sin Ming market and food centre nearby; a longer ride to Sengkang and Punggol.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/listing/for-rent-thomson-impressions-500261676" target="_blank" rel="noopener">View listing</a>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="card-top">
+          <div><h3>The Acacias</h3></div>
+          <div class="rent">S$5,000 <small>/mo</small></div>
+        </div>
+        <div class="facts">
+          <span><b>3 bed, 3 bath</b></span><span><b>1,249 sqft</b></span>
+          <span class="mrt"><span class="chip nel">NE11</span> Woodleigh, 10 min walk</span>
+        </div>
+        <ul class="why">
+          <li>Quiet boutique development (2009); also a 1,210 sqft unit at S$5,100.</li>
+        </ul>
+        <div class="links">
+          <a href="https://www.propertyguru.com.sg/property-for-rent/at-the-acacias-767" target="_blank" rel="noopener">All The Acacias rentals</a>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="also">
+    <h2 id="also">Also worth a look</h2>
+    <p>A little over budget, a little smaller, or a longer walk to the MRT.</p>
+    <div class="list">
+      <table>
+        <thead><tr><th scope="col">Development</th><th scope="col">Unit</th><th scope="col">Rent</th><th scope="col">MRT</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://www.propertyguru.com.sg/listing/for-rent-bartley-ridge-500174560" target="_blank" rel="noopener">Bartley Ridge</a><div class="note">On your list; check it doesn't face the main road</div></td><td class="num">3 bed · 1,044 sqft</td><td class="num">S$5,200</td><td><span class="chip ccl">CC12</span> Bartley, 3 min</td></tr>
+          <tr><td><a href="https://www.propertyguru.com.sg/property-for-rent?freetext=Le%20Crescendo" target="_blank" rel="noopener">Le Crescendo</a><div class="note">Near Circuit Road</div></td><td class="num">3 bed · 1,184 sqft</td><td class="num">S$5,200</td><td><span class="chip ccl">CC11</span> Tai Seng, 10 min</td></tr>
+          <tr><td><a href="https://www.propertyguru.com.sg/property-for-rent/at-sengkang-grand-residences-23825" target="_blank" rel="noopener">Sengkang Grand Residences</a><div class="note">Above the MRT, mall and hawker centre; newer</div></td><td class="num">3 bed · 936–1,055 sqft</td><td class="num">S$4,500–4,800</td><td><span class="chip nel">NE15</span> Buangkok, direct</td></tr>
+          <tr><td><a href="https://www.propertyguru.com.sg/listing/for-rent-riverfront-residences-500162920" target="_blank" rel="noopener">Riverfront Residences</a><div class="note">Newer (2023); smaller</div></td><td class="num">3 bed · 915 sqft</td><td class="num">S$4,300</td><td><span class="chip nel">NE14</span> Hougang</td></tr>
+          <tr><td><a href="https://www.propertyguru.com.sg/property-for-rent/at-kingsford-waterbay-22069" target="_blank" rel="noopener">Kingsford Waterbay</a><div class="note">Next to Rio Vista; riverside park</div></td><td class="num">4 bed · 1,100 sqft</td><td class="num">S$4,499</td><td>Kangkar LRT, 14 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section" aria-labelledby="sk">
+    <h2 id="sk">In Sengkang</h2>
+    <p>Near the workplace in Sengkang, one stop further out.</p>
+    <div class="list">
+      <table>
+        <thead><tr><th scope="col">Development</th><th scope="col">Unit</th><th scope="col">Rent</th><th scope="col">MRT</th></tr></thead>
+        <tbody>
+          <tr><td><a href="https://www.propertyguru.com.sg/listing/for-rent-la-fiesta-500149886" target="_blank" rel="noopener">La Fiesta</a><div class="note">Next to Compass One mall and the bus interchange</div></td><td class="num">3 bed · 1,001 sqft</td><td class="num">S$4,600</td><td><span class="chip nel">NE16</span> Sengkang, 2 min</td></tr>
+          <tr><td><a href="https://www.propertyguru.com.sg/listing/for-rent-the-vales-500242916" target="_blank" rel="noopener">The Vales (EC)</a><div class="note">Near Sengkang Riverside Park</div></td><td class="num">3 bed · 1,044 sqft</td><td class="num">S$4,488</td><td><span class="chip nel">NE16</span> Sengkang, 11 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="next" aria-labelledby="nx">
+    <h2 id="nx">Next steps</h2>
+    <ol>
+      <li>Tell me which ones you'd like to see, even just 3 or 4.</li>
+      <li>I'll confirm each is still available for a December move-in, then line up viewings.</li>
+      <li>I'll keep watching for new listings, since most December units come up in October and November.</li>
+    </ol>
+  </section>
+
+  <p class="foot">Rents and sizes are the asking figures on PropertyGuru as of 30 Sep 2026. Listings change quickly, so availability will be confirmed before viewings.</p>
+</main>

@@ -41,6 +41,26 @@ Useful flags: `--no-details` (don't open each listing page; faster, fewer unit n
 `--headful` (visible browser, local machine only), `--url <search url>` (custom search).
 Search URLs and match terms live in `pgscraper/config.py`.
 
+## Value 3BR EC shortlist + client deck
+
+```bash
+python -m pgscraper.ec_value --headful --contact "Your Name · 9123 4567"
+```
+
+Finds **3-bedroom Executive Condos, 1,000+ sqft, asking S$1.6M or less, in projects that TOP'd within
+the last 10 years and are past their 5-year MOP**. It re-checks every listing in
+`data/ec_value_3br_shortlist.csv`, searches PropertyGuru for more in each eligible project, opens each
+listing for bedrooms, size and photos, and drops anything sold, withdrawn or outside the criteria.
+
+| File | What |
+|---|---|
+| `output/ec_value_3br_<date>/deck.html` | Slide deck: cover, "at a glance" table, one slide per listing with photos. Open in Chrome → Print → Save as PDF to send. |
+| `output/ec_value_3br_<date>/shortlist.xlsx` | Same listings with agent, notes and links, for your own follow-up |
+| `output/ec_value_3br_<date>/photos/` | Downloaded listing photos |
+
+Criteria, the project list with TOP dates, and photos per listing are in `pgscraper/config.py`
+(`EC_*`). `--no-search` only re-checks the shortlist CSV.
+
 ## How it works
 
 1. Opens the PropertyGuru search results in headless Chromium and pages through them.

@@ -345,3 +345,52 @@ def enrich_from_detail(listing: Listing, html: str, page_text: str) -> None:
     if not listing.size_sqft:
         listing.size_sqft = parse_sqft(page_text)
     listing.text += " | " + page_text
+
+
+# ---------------------------------------------------------------- bedrooms & photos
+
+_BEDS_RE = re.compile(r"\b(\d)\s*(?:\+\s*\d\s*)?(?:bed(?:room)?s?|br|bdr)\b", re.I)
+_IMG_URL_RE = re.compile(r"https?:\\?/\\?/[^\s\"'<>()]+?\.(?:jpe?g|png|webp)(?:\?[^\s\"'<>()]*)?", re.I)
+_OG_IMAGE_RE = re.compile(r'<meta[^>]+property="og:image"[^>]+content="([^"]+)"', re.I)
+# Listing photos live on PropertyGuru's image CDN; agent headshots, logos and floor-plan icons don't count.
+_NOT_A_PHOTO = ("agent", "agpho", "avatar", "logo", "icon", "badge", "profile", "banner", "sprite", "static")
+
+
+def extract_bedrooms(text: str) -> int | None:
+    """Most-mentioned bedroom count in a text blob ("3 Beds", "3 Bedrooms", "3BR", "3+1 bedrooms")."""
+    counts: dict[int, int] = {}
+    for n in _BEDS_RE.findall(text or ""):
+        counts[int(n)] = counts.get(int(n), 0) + 1
+    return max(counts, key=counts.get) if counts else None
+
+
+def _photo_key(url: str) -> str:
+    """Same photo at different sizes -> same key (PG puts the size in the path, e.g. .V800 / .V550)."""
+    name = url.split("?")[0].rsplit("/", 1)[-1]
+    return re.sub(r"\.V\d+", "", name).lower()
+
+
+def extract_photos(html: str, listing_id: str = "", limit: int = 8) -> list[str]:
+    """Listing photo URLs from a listing page, biggest version of each, in page order."""
+    urls: list[str] = []
+    for u in _IMG_URL_RE.findall(html or ""):
+        u = u.replace("\\/", "/").replace("\\u002F", "/")
+        low = u.lower()
+        if "pgimgs.com" not in low or any(t in low for t in _NOT_A_PHOTO):
+            continue
+        if listing_id and "/listing/" in low and f"/{listing_id}/" not in low:
+            continue  # another listing's photo (e.g. "similar listings")
+        urls.append(u)
+    if not urls:
+        urls = [u for u in _OG_IMAGE_RE.findall(html or "")]
+
+    def size(u: str) -> int:
+        m = re.search(r"\.V(\d+)", u)
+        return int(m.group(1)) if m else 0
+
+    best: dict[str, str] = {}
+    for u in urls:
+        k = _photo_key(u)
+        if k not in best or size(u) > size(best[k]):
+            best[k] = u
+    return list(best.values())[:limit]

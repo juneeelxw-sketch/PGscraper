@@ -119,6 +119,16 @@ class Fetcher:
                 return
         raise BlockedError(f"Verification wasn't completed in time at {url}")
 
+    def download(self, url: str, referer: str = "") -> bytes | None:
+        """Fetch a file (e.g. a listing photo) with the browser's cookies; None if it fails."""
+        assert self._ctx is not None
+        try:
+            resp = self._ctx.request.get(url, headers={"Referer": referer} if referer else None,
+                                         timeout=30_000)
+        except Exception:
+            return None
+        return resp.body() if resp.ok else None
+
     def get(self, url: str) -> tuple[str, str, list[dict]]:
         """Return (html, visible_text, dom_cards) for a URL."""
         assert self._page is not None
